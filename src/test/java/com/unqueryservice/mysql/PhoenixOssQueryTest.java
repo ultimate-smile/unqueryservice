@@ -49,7 +49,7 @@ import static org.mockito.Mockito.*;
  */
 @Tag("mysql")
 @SpringBootTest
-@ActiveProfiles("mysql-it")
+//@ActiveProfiles("mysql-it")
 @ExtendWith(MySqlAvailabilityExtension.class)
 @DisplayName("phoenix.sys_oss – live MySQL query tests")
 class PhoenixOssQueryTest {
