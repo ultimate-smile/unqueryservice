@@ -1,0 +1,32 @@
+# Test-specific overrides
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+query-service:
+  cache-ttl-seconds: 0    # Disable caching in tests
+  jwt:
+    secret: TEST_SECRET_THAT_IS_LONG_ENOUGH_FOR_HMAC_SHA256_SIGNING_AT_LEAST_256_BITS
+    expiration-ms: 60000
+  data-sources:
+    test-h2:
+      type: h2
+      url: "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL"
+      username: sa
+      password: ""
+      driver-class-name: org.h2.Driver
+      max-pool-size: 5
+  permissions:
+    test-h2:
+      allowed-roles:
+        - ROLE_ADMIN
+        - ROLE_ANALYST
+      masked-columns:
+        - secret_col
+      row-filter: ""

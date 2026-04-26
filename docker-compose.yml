@@ -1,0 +1,79 @@
+version: "3.9"
+
+services:
+
+  # ----------------------------------------------------------------
+  # Redis – used for result caching
+  # ----------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: uqs-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --save 60 1 --loglevel warning
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ----------------------------------------------------------------
+  # The query service itself
+  # ----------------------------------------------------------------
+  unqueryservice:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: uqs-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Redis connection
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+      # JWT secret – override this in production!
+      QUERY_SERVICE_JWT_SECRET: "REPLACE_WITH_A_SECURE_256_BIT_SECRET_FOR_PRODUCTION_USE"
+
+      # Optional: MySQL data source
+      # MYSQL_HOST: mysql
+      # MYSQL_DB: mydb
+      # MYSQL_USER: root
+      # MYSQL_PASSWORD: secret
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+
+  # ----------------------------------------------------------------
+  # Optional: MySQL (uncomment if you want a local MySQL for testing)
+  # ----------------------------------------------------------------
+  # mysql:
+  #   image: mysql:8.0
+  #   container_name: uqs-mysql
+  #   restart: unless-stopped
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: secret
+  #     MYSQL_DATABASE: mydb
+  #   ports:
+  #     - "3306:3306"
+  #   volumes:
+  #     - mysql-data:/var/lib/mysql
+  #   healthcheck:
+  #     test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 10
+
+volumes:
+  redis-data:
+  # mysql-data:
