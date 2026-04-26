@@ -1,0 +1,28 @@
+# Profile for live MySQL integration tests.
+# Activated with: @ActiveProfiles({"mysql-it"})
+# Redis is excluded; caching is disabled so every test hits MySQL directly.
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+
+query-service:
+  cache-ttl-seconds: 0
+  default-row-limit: 1000
+  max-row-limit: 10000
+
+  data-sources:
+    mysql-phoenix:
+      type: mysql
+      url: "jdbc:mysql://${MYSQL_HOST:127.0.0.1}:3306/phoenix?useSSL=false&serverTimezone=UTC&characterEncoding=utf8mb4&connectTimeout=3000&socketTimeout=5000"
+      username: ${MYSQL_USER:root}
+      password: ${MYSQL_PASSWORD:W2pLIKgtWz4XunL9pja}
+      max-pool-size: 5
+
+    mysql-snpi:
+      type: mysql
+      url: "jdbc:mysql://${MYSQL_HOST:127.0.0.1}:3306/snpi?useSSL=false&serverTimezone=UTC&characterEncoding=utf8mb4&connectTimeout=3000&socketTimeout=5000"
+      username: ${MYSQL_USER:root}
+      password: ${MYSQL_PASSWORD:W2pLIKgtWz4XunL9pja}
+      max-pool-size: 5

@@ -48,77 +48,32 @@ query-service:
   # Redis cache TTL in seconds (set to 0 to disable caching)
   cache-ttl-seconds: 60
 
-  # JWT settings
-  jwt:
-    # Override this secret via QUERY_SERVICE_JWT_SECRET environment variable in production!
-    secret: ${QUERY_SERVICE_JWT_SECRET:CHANGE_ME_IN_PRODUCTION_THIS_MUST_BE_AT_LEAST_256_BITS_LONG!!}
-    expiration-ms: 3600000   # 1 hour
-
   # Named data-source configurations
   # Each key is the logical name clients send in QueryRequest.dataSource
   data-sources:
-    # Example: SQLite in-memory database (great for demo / local dev)
-    sqlite-demo:
-      type: sqlite
-      url: "jdbc:sqlite::memory:"
-      driver-class-name: org.sqlite.JDBC
-      max-pool-size: 5
 
-     #Example: MySQL (uncomment and fill in real credentials)
     mysql-orch:
-       type: mysql
-       url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:3306/${MYSQL_DB:orch}?useSSL=false&serverTimezone=UTC
-       username: ${MYSQL_USER:root}
-       password: ${MYSQL_PASSWORD:W2pLIKgtWz4XunL9pja}
-       max-pool-size: 20
-
-    mysql-snpi:
       type: mysql
-      url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:3306/${MYSQL_DB:snpi}?useSSL=false&serverTimezone=UTC
+      url: "jdbc:mysql://${MYSQL_HOST:127.0.0.1}:3306/orch?useSSL=false&serverTimezone=UTC&characterEncoding=utf8mb4"
       username: ${MYSQL_USER:root}
       password: ${MYSQL_PASSWORD:W2pLIKgtWz4XunL9pja}
       max-pool-size: 20
 
-    # Example: Oracle (uncomment and fill in real credentials)
-    # oracle-prod:
-    #   type: oracle
-    #   url: jdbc:oracle:thin:@${ORACLE_HOST:localhost}:1521/${ORACLE_SID:orcl}
-    #   username: ${ORACLE_USER:system}
-    #   password: ${ORACLE_PASSWORD:oracle}
-    #   driver-class-name: oracle.jdbc.OracleDriver
-    #   max-pool-size: 20
+    mysql-phoenix:
+      type: mysql
+      url: "jdbc:mysql://${MYSQL_HOST:127.0.0.1}:3306/phoenix?useSSL=false&serverTimezone=UTC&characterEncoding=utf8mb4"
+      username: ${MYSQL_USER:root}
+      password: ${MYSQL_PASSWORD:W2pLIKgtWz4XunL9pja}
+      max-pool-size: 20
 
-    # Example: SQL Server (uncomment and fill in real credentials)
-    # sqlserver-prod:
-    #   type: sqlserver
-    #   url: jdbc:sqlserver://${SQLSERVER_HOST:localhost}:1433;databaseName=${SQLSERVER_DB:mydb};encrypt=true;trustServerCertificate=true
-    #   username: ${SQLSERVER_USER:sa}
-    #   password: ${SQLSERVER_PASSWORD:YourStrong@Passw0rd}
-    #   driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
-    #   max-pool-size: 20
-
-  # Permission rules per data source
-  # Keys must match data-source names above
-  permissions:
-    sqlite-demo:
-      allowed-roles:
-        - ROLE_ADMIN
-        - ROLE_ANALYST
-        - ROLE_VIEWER
-      masked-columns: []   # No columns masked for demo
-      row-filter: ""       # No row-level filter for demo
-
-    # mysql-prod:
-    #   allowed-roles:
-    #     - ROLE_ADMIN
-    #     - ROLE_ANALYST
-    #   masked-columns:
-    #     - credit_card_number
-    #     - ssn
-    #   row-filter: "tenant_id = '${user.tenant}'"   # Replaced at runtime
+    mysql-snpi:
+      type: mysql
+      url: "jdbc:mysql://${MYSQL_HOST:127.0.0.1}:3306/snpi?useSSL=false&serverTimezone=UTC&characterEncoding=utf8mb4"
+      username: ${MYSQL_USER:root}
+      password: ${MYSQL_PASSWORD:W2pLIKgtWz4XunL9pja}
+      max-pool-size: 20
 
 logging:
   level:
     com.unqueryservice: INFO
     org.apache.calcite: WARN
-    org.springframework.security: WARN
