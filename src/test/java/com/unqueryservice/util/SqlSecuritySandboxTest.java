@@ -1,4 +1,4 @@
-package com.unqueryservice.security;
+package com.unqueryservice.util;
 
 import com.unqueryservice.exception.SqlSecurityException;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,8 +65,8 @@ class SqlSecuritySandboxTest {
 
     /**
      * DML (INSERT/UPDATE/DELETE) is parsed by the core Calcite parser and then
-     * rejected at the statement-kind check.  DDL (DROP/CREATE/TRUNCATE/ALTER)
-     * is not in the core parser and fails at parse time – both outcomes produce
+     * rejected at the statement-kind check. DDL (DROP/CREATE/TRUNCATE/ALTER)
+     * is not in the core Calcite parser and fails at parse time. Both produce
      * a {@link SqlSecurityException}.
      */
     @ParameterizedTest

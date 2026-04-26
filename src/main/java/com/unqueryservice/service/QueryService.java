@@ -2,19 +2,20 @@ package com.unqueryservice.service;
 
 import com.unqueryservice.model.QueryRequest;
 import com.unqueryservice.model.QueryResult;
-import org.springframework.security.core.Authentication;
 
 /**
  * High-level query service contract.
+ *
+ * <p>Authentication and permission control are delegated to ThingsBoard.
+ * This service assumes every inbound request is already authorised.
  */
 public interface QueryService {
 
     /**
-     * Executes the given query request on behalf of the authenticated user.
+     * Executes the given query request.
      *
-     * @param request        the validated query request
-     * @param authentication the current user's authentication context
-     * @return               the query result (possibly from cache)
+     * @param request the validated query request
+     * @return        the query result (possibly from cache)
      */
-    QueryResult execute(QueryRequest request, Authentication authentication);
+    QueryResult execute(QueryRequest request);
 }

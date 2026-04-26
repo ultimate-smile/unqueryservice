@@ -23,7 +23,6 @@
     <properties>
         <java.version>17</java.version>
         <calcite.version>1.37.0</calcite.version>
-        <jjwt.version>0.12.6</jjwt.version>
     </properties>
 
     <dependencies>
@@ -32,12 +31,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-
-        <!-- Spring Security -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
         <!-- Spring Data Redis -->
@@ -71,7 +64,6 @@
             <artifactId>calcite-core</artifactId>
             <version>${calcite.version}</version>
             <exclusions>
-                <!-- Avoid slf4j binding conflicts -->
                 <exclusion>
                     <groupId>org.slf4j</groupId>
                     <artifactId>slf4j-log4j12</artifactId>
@@ -83,30 +75,11 @@
             </exclusions>
         </dependency>
 
-        <!-- Apache Calcite JDBC adapter for JDBC-backed schemas -->
+        <!-- Apache Calcite JDBC adapter -->
         <dependency>
             <groupId>org.apache.calcite</groupId>
             <artifactId>calcite-linq4j</artifactId>
             <version>${calcite.version}</version>
-        </dependency>
-
-        <!-- JWT -->
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-api</artifactId>
-            <version>${jjwt.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-impl</artifactId>
-            <version>${jjwt.version}</version>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-jackson</artifactId>
-            <version>${jjwt.version}</version>
-            <scope>runtime</scope>
         </dependency>
 
         <!-- MySQL Connector -->
@@ -123,7 +96,7 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- HikariCP connection pool (included by Spring Boot) -->
+        <!-- HikariCP connection pool -->
         <dependency>
             <groupId>com.zaxxer</groupId>
             <artifactId>HikariCP</artifactId>
@@ -142,7 +115,7 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
 
-        <!-- Guava (Calcite dependency, useful for caching) -->
+        <!-- Guava (Calcite dependency) -->
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
@@ -153,11 +126,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

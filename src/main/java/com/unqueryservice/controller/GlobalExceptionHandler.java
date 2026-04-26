@@ -1,7 +1,6 @@
 package com.unqueryservice.controller;
 
 import com.unqueryservice.exception.DataSourceNotFoundException;
-import com.unqueryservice.exception.PermissionDeniedException;
 import com.unqueryservice.exception.QueryServiceException;
 import com.unqueryservice.exception.SqlSecurityException;
 import com.unqueryservice.model.ErrorResponse;
@@ -9,7 +8,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -19,7 +17,7 @@ import java.util.stream.Collectors;
 
 /**
  * Centralised exception handling: maps every exception type to a standardised
- * {@link ErrorResponse} body so clients always get a consistent JSON error shape.
+ * {@link ErrorResponse} body so clients always receive a consistent JSON error shape.
  */
 @Slf4j
 @RestControllerAdvice
@@ -29,13 +27,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleSqlSecurity(SqlSecurityException ex,
                                                             HttpServletRequest request) {
         log.warn("SQL security violation: {}", ex.getMessage());
-        return build(HttpStatus.FORBIDDEN, ex.getMessage(), request.getRequestURI());
-    }
-
-    @ExceptionHandler(PermissionDeniedException.class)
-    public ResponseEntity<ErrorResponse> handlePermissionDenied(PermissionDeniedException ex,
-                                                                  HttpServletRequest request) {
-        log.warn("Permission denied: {}", ex.getMessage());
         return build(HttpStatus.FORBIDDEN, ex.getMessage(), request.getRequestURI());
     }
 
@@ -51,13 +42,6 @@ public class GlobalExceptionHandler {
                                                              HttpServletRequest request) {
         log.error("Query service error: {}", ex.getMessage(), ex);
         return build(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request.getRequestURI());
-    }
-
-    @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex,
-                                                               HttpServletRequest request) {
-        log.warn("Bad credentials for request: {}", request.getRequestURI());
-        return build(HttpStatus.UNAUTHORIZED, "Invalid username or password", request.getRequestURI());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -76,10 +60,6 @@ public class GlobalExceptionHandler {
         log.error("Unexpected error: {}", ex.getMessage(), ex);
         return build(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred", request.getRequestURI());
     }
-
-    // -----------------------------------------------------------------------
-    // Private helpers
-    // -----------------------------------------------------------------------
 
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String message, String path) {
         ErrorResponse body = ErrorResponse.builder()

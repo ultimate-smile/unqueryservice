@@ -9,13 +9,15 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Set;
 
 /**
  * REST endpoint for submitting queries and managing cache.
+ *
+ * <p>Authentication and permission control are handled by ThingsBoard upstream.
+ * This service trusts all inbound requests.
  */
 @Slf4j
 @RestController
@@ -30,23 +32,19 @@ public class QueryController {
     /**
      * POST /api/query
      *
-     * <p>Executes a SQL query against the specified data source. Returns the
-     * result set (or a cached copy if the same query was recently executed).
-     *
-     * <p>Requires a valid {@code Authorization: Bearer <token>} header.
+     * <p>Executes a SQL query against the specified data source and returns
+     * the result set (or a cached copy if the same query was recently executed).
      */
     @PostMapping("/query")
-    public ResponseEntity<QueryResult> query(@Valid @RequestBody QueryRequest request,
-                                             Authentication authentication) {
-        QueryResult result = queryService.execute(request, authentication);
+    public ResponseEntity<QueryResult> query(@Valid @RequestBody QueryRequest request) {
+        QueryResult result = queryService.execute(request);
         return ResponseEntity.ok(result);
     }
 
     /**
      * GET /api/datasources
      *
-     * <p>Returns the list of registered data source names. Useful for clients
-     * to discover available targets without reading server configuration.
+     * <p>Returns the list of registered data source names.
      */
     @GetMapping("/datasources")
     public ResponseEntity<Set<String>> listDataSources() {
@@ -57,21 +55,11 @@ public class QueryController {
      * DELETE /api/cache/{dataSource}
      *
      * <p>Evicts all cached query results for the given data source.
-     * Restricted to users with the {@code ROLE_ADMIN} authority.
      */
     @DeleteMapping("/cache/{dataSource}")
-    public ResponseEntity<Void> evictCache(@PathVariable String dataSource,
-                                           Authentication authentication) {
-        // Check admin role
-        boolean isAdmin = authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equalsIgnoreCase("ROLE_ADMIN")
-                            || a.getAuthority().equalsIgnoreCase("ADMIN"));
-        if (!isAdmin) {
-            return ResponseEntity.status(403).build();
-        }
-
+    public ResponseEntity<Void> evictCache(@PathVariable String dataSource) {
         cacheService.evictDataSource(dataSource);
-        log.info("Cache evicted for data source '{}' by '{}'", dataSource, authentication.getName());
+        log.info("Cache evicted for data source '{}'", dataSource);
         return ResponseEntity.noContent().build();
     }
 }

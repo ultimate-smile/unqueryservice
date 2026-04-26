@@ -1,4 +1,4 @@
-package com.unqueryservice.security;
+package com.unqueryservice.util;
 
 import com.unqueryservice.exception.SqlSecurityException;
 import lombok.extern.slf4j.Slf4j;
@@ -7,7 +7,6 @@ import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
@@ -16,13 +15,15 @@ import java.util.Set;
  *
  * <p>Validation strategy:
  * <ol>
- *   <li>Parse the statement with Apache Calcite's SQL parser (catches syntax errors
- *       and detects the statement kind).</li>
- *   <li>Allow only {@code SELECT} statements — all DDL and DML is rejected.</li>
- *   <li>Keyword blocklist check against a deny-list of dangerous patterns.</li>
- *   <li>Length cap (delegated to bean validation on the request DTO, but also
- *       enforced here as a second line of defence).</li>
+ *   <li>Length cap — max 10,000 characters.</li>
+ *   <li>Keyword deny-list — blocks known injection and data-exfiltration patterns.</li>
+ *   <li>Calcite AST parse — detects syntax errors and identifies the statement kind.</li>
+ *   <li>Statement kind check — only {@code SELECT} and set-operation variants are allowed.</li>
  * </ol>
+ *
+ * <p>Even if a statement passes the sandbox, all queries additionally use JDBC
+ * prepared statements with bind parameters, so injection via parameter values is
+ * structurally impossible.
  */
 @Slf4j
 @Component
@@ -30,24 +31,20 @@ public class SqlSecuritySandbox {
 
     private static final int MAX_SQL_LENGTH = 10_000;
 
-    /**
-     * Dangerous SQL keywords / patterns that must never appear in a query,
-     * even inside a SELECT.
-     */
     private static final Set<String> BLOCKED_KEYWORDS = Set.of(
-            "INTO OUTFILE", "INTO DUMPFILE",    // MySQL file export
-            "LOAD_FILE",                         // MySQL file read
-            "SLEEP(", "BENCHMARK(",              // MySQL time-based injection
-            "WAITFOR DELAY", "WAITFOR TIME",     // SQL Server time-based injection
-            "DBMS_PIPE", "UTL_FILE",             // Oracle dangerous packages
-            "XP_CMDSHELL", "SP_EXECUTESQL",      // SQL Server execution
-            "EXEC(", "EXECUTE(",                  // generic execute
-            "OPENROWSET", "OPENDATASOURCE"        // SQL Server lateral data access
+            "INTO OUTFILE", "INTO DUMPFILE",
+            "LOAD_FILE",
+            "SLEEP(", "BENCHMARK(",
+            "WAITFOR DELAY", "WAITFOR TIME",
+            "DBMS_PIPE", "UTL_FILE",
+            "XP_CMDSHELL", "SP_EXECUTESQL",
+            "EXEC(", "EXECUTE(",
+            "OPENROWSET", "OPENDATASOURCE"
     );
 
     /**
-     * Validates the SQL string.  Throws {@link SqlSecurityException} if any
-     * rule is violated; returns silently on success.
+     * Validates the SQL string. Throws {@link SqlSecurityException} if any rule is
+     * violated; returns silently on success.
      *
      * @param sql the raw SQL received from the client
      */
@@ -57,10 +54,10 @@ public class SqlSecuritySandbox {
         }
 
         if (sql.length() > MAX_SQL_LENGTH) {
-            throw new SqlSecurityException("SQL statement exceeds maximum allowed length of " + MAX_SQL_LENGTH);
+            throw new SqlSecurityException(
+                    "SQL statement exceeds maximum allowed length of " + MAX_SQL_LENGTH);
         }
 
-        // Keyword blocklist (case-insensitive)
         String upper = sql.toUpperCase(Locale.ROOT);
         for (String blocked : BLOCKED_KEYWORDS) {
             if (upper.contains(blocked)) {
@@ -68,19 +65,16 @@ public class SqlSecuritySandbox {
             }
         }
 
-        // Parse using Calcite to detect statement kind and syntax errors.
-        // parseStatement() is used (not parseQuery()) so that DDL/DML statements
-        // parse successfully and reach the kind-check below rather than failing
-        // with a confusing syntax error message.
         SqlParser parser = SqlParser.create(sql, SqlParser.Config.DEFAULT);
         SqlNode node;
         try {
+            // parseStmt() accepts DML/DDL (unlike parseQuery()) so they reach the kind check
+            // and produce the clearer "Only SELECT statements are permitted" message.
             node = parser.parseStmt();
         } catch (SqlParseException ex) {
             throw new SqlSecurityException("SQL parse error: " + ex.getMessage());
         }
 
-        // Only SELECT (and its sub-types like UNION, INTERSECT, EXCEPT) are allowed
         SqlKind kind = node.getKind();
         if (!isAllowedKind(kind)) {
             throw new SqlSecurityException(
@@ -89,10 +83,6 @@ public class SqlSecuritySandbox {
 
         log.debug("SQL passed security validation (kind={})", kind);
     }
-
-    // -----------------------------------------------------------------------
-    // Private helpers
-    // -----------------------------------------------------------------------
 
     private boolean isAllowedKind(SqlKind kind) {
         return kind == SqlKind.SELECT
