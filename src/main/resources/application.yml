@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: 8010
   servlet:
     context-path: /
 
@@ -10,9 +10,9 @@ spring:
   # Redis connection (override via env vars in Docker)
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
+      host: ${REDIS_HOST:127.0.0.1}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
+      password: ${REDIS_PASSWORD:zxcde@1}
       timeout: 3000ms
       lettuce:
         pool:
@@ -64,13 +64,20 @@ query-service:
       driver-class-name: org.sqlite.JDBC
       max-pool-size: 5
 
-    # Example: MySQL (uncomment and fill in real credentials)
-    # mysql-prod:
-    #   type: mysql
-    #   url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/${MYSQL_DB:mydb}?useSSL=false&serverTimezone=UTC
-    #   username: ${MYSQL_USER:root}
-    #   password: ${MYSQL_PASSWORD:secret}
-    #   max-pool-size: 20
+     #Example: MySQL (uncomment and fill in real credentials)
+    mysql-orch:
+       type: mysql
+       url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:3306/${MYSQL_DB:orch}?useSSL=false&serverTimezone=UTC
+       username: ${MYSQL_USER:root}
+       password: ${MYSQL_PASSWORD:W2pLIKgtWz4XunL9pja}
+       max-pool-size: 20
+
+    mysql-snpi:
+      type: mysql
+      url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:3306/${MYSQL_DB:snpi}?useSSL=false&serverTimezone=UTC
+      username: ${MYSQL_USER:root}
+      password: ${MYSQL_PASSWORD:W2pLIKgtWz4XunL9pja}
+      max-pool-size: 20
 
     # Example: Oracle (uncomment and fill in real credentials)
     # oracle-prod:
