@@ -2,6 +2,7 @@ package com.unqueryservice.service;
 
 import com.unqueryservice.config.DataSourceRegistry;
 import com.unqueryservice.exception.SqlSecurityException;
+import com.unqueryservice.model.PageResult;
 import com.unqueryservice.model.QueryRequest;
 import com.unqueryservice.model.QueryResult;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,87 +52,121 @@ class QueryServiceIntegrationTest {
             stmt.execute("DROP TABLE IF EXISTS employees");
             stmt.execute("CREATE TABLE employees (" +
                     "id INT PRIMARY KEY, name VARCHAR(100), dept VARCHAR(50))");
-            stmt.execute("INSERT INTO employees VALUES (1, 'Alice', 'Engineering')");
-            stmt.execute("INSERT INTO employees VALUES (2, 'Bob',   'Marketing')");
-            stmt.execute("INSERT INTO employees VALUES (3, 'Carol', 'Engineering')");
+            for (int i = 1; i <= 25; i++) {
+                stmt.execute("INSERT INTO employees VALUES (" + i + ", 'Employee" + i + "', " +
+                        (i % 2 == 0 ? "'Engineering'" : "'Marketing'") + ")");
+            }
         }
     }
 
+    // ------------------------------------------------------------------
+    // Non-paged tests
+    // ------------------------------------------------------------------
+
     @Test
     void simpleSelect_returnsAllRows() {
-        QueryRequest req = new QueryRequest();
-        req.setDataSource("test-h2");
-        req.setSql("SELECT id, name FROM employees ORDER BY id");
-
-        QueryResult result = queryService.execute(req);
-
-        assertThat(result.getRowCount()).isEqualTo(3);
+        QueryResult result = queryService.execute(req("SELECT id, name FROM employees ORDER BY id"));
+        assertThat(result.getRowCount()).isEqualTo(25);
         assertThat(result.getColumns()).hasSize(2);
-        assertThat(result.getRows().get(0).values()).contains("Alice");
+        assertThat(result.getRows().get(0).values()).contains("Employee1");
     }
 
     @Test
     void selectWithWhereClause_filtersRows() {
-        QueryRequest req = new QueryRequest();
-        req.setDataSource("test-h2");
-        req.setSql("SELECT id, name FROM employees WHERE dept = 'Engineering'");
-
-        QueryResult result = queryService.execute(req);
-
-        assertThat(result.getRowCount()).isEqualTo(2);
+        QueryResult result = queryService.execute(req("SELECT id FROM employees WHERE dept = 'Engineering'"));
+        assertThat(result.getRowCount()).isEqualTo(12);
     }
 
     @Test
     void limitIsRespected() {
-        QueryRequest req = new QueryRequest();
-        req.setDataSource("test-h2");
-        req.setSql("SELECT id FROM employees");
-        req.setLimit(2);
-
-        QueryResult result = queryService.execute(req);
-
-        assertThat(result.getRowCount()).isLessThanOrEqualTo(2);
+        QueryRequest r = req("SELECT id FROM employees");
+        r.setLimit(5);
+        assertThat(queryService.execute(r).getRowCount()).isLessThanOrEqualTo(5);
     }
 
     @Test
-    void cacheHit_returnsMarkedResult() {
+    void cacheHit_returnsCachedResult() {
         QueryResult cached = QueryResult.builder()
-                .dataSource("test-h2")
-                .columns(java.util.List.of("id"))
-                .rows(java.util.List.of())
-                .rowCount(0)
-                .elapsedMs(1)
-                .cached(false)
-                .build();
+                .dataSource("test-h2").columns(java.util.List.of("id"))
+                .rows(java.util.List.of()).rowCount(0).elapsedMs(1).cached(false).build();
         when(cacheService.get(anyString())).thenReturn(Optional.of(cached));
 
-        QueryRequest req = new QueryRequest();
-        req.setDataSource("test-h2");
-        req.setSql("SELECT id FROM employees");
-
-        QueryResult result = queryService.execute(req);
-
+        QueryResult result = queryService.execute(req("SELECT id FROM employees"));
         assertThat(result.isCached()).isTrue();
     }
 
     @Test
     void insertStatement_isRejected() {
-        QueryRequest req = new QueryRequest();
-        req.setDataSource("test-h2");
-        req.setSql("INSERT INTO employees VALUES (99, 'Evil', 'Hax')");
-
-        assertThatThrownBy(() -> queryService.execute(req))
+        assertThatThrownBy(() -> queryService.execute(
+                req("INSERT INTO employees VALUES (99, 'Evil', 'Hax')")))
                 .isInstanceOf(SqlSecurityException.class);
     }
 
     @Test
     void elapsedTime_isPopulated() {
-        QueryRequest req = new QueryRequest();
-        req.setDataSource("test-h2");
-        req.setSql("SELECT id FROM employees");
+        assertThat(queryService.execute(req("SELECT id FROM employees LIMIT 1")).getElapsedMs())
+                .isGreaterThanOrEqualTo(0);
+    }
 
-        QueryResult result = queryService.execute(req);
+    // ------------------------------------------------------------------
+    // Paged tests
+    // ------------------------------------------------------------------
 
+    @Test
+    void pagedQuery_firstPage_returnsCorrectSlice() {
+        PageResult result = queryService.executePaged(pagedReq("SELECT id FROM employees ORDER BY id", 1, 10));
+
+        assertThat(result.getTotal()).isEqualTo(25);
+        assertThat(result.getPage()).isEqualTo(1);
+        assertThat(result.getPageSize()).isEqualTo(10);
+        assertThat(result.getTotalPages()).isEqualTo(3);
+        assertThat(result.getRows()).hasSize(10);
+    }
+
+    @Test
+    void pagedQuery_lastPage_returnsRemainingRows() {
+        PageResult result = queryService.executePaged(pagedReq("SELECT id FROM employees ORDER BY id", 3, 10));
+
+        assertThat(result.getTotal()).isEqualTo(25);
+        assertThat(result.getRows()).hasSize(5);   // 25 - 20 = 5 on the last page
+        assertThat(result.getPage()).isEqualTo(3);
+        assertThat(result.getTotalPages()).isEqualTo(3);
+    }
+
+    @Test
+    void pagedQuery_withFilter_countReflectsFilter() {
+        PageResult result = queryService.executePaged(
+                pagedReq("SELECT id, name FROM employees WHERE dept = 'Engineering' ORDER BY id", 1, 5));
+
+        assertThat(result.getTotal()).isEqualTo(12);
+        assertThat(result.getTotalPages()).isEqualTo(3);  // ceil(12/5)
+        assertThat(result.getRows()).hasSize(5);
+    }
+
+    @Test
+    void pagedQuery_metadataIsCorrect() {
+        PageResult result = queryService.executePaged(pagedReq("SELECT id FROM employees", 1, 10));
+
+        assertThat(result.getDataSource()).isEqualTo("test-h2");
+        assertThat(result.isCached()).isFalse();
         assertThat(result.getElapsedMs()).isGreaterThanOrEqualTo(0);
+    }
+
+    // ------------------------------------------------------------------
+    // Helpers
+    // ------------------------------------------------------------------
+
+    private QueryRequest req(String sql) {
+        QueryRequest r = new QueryRequest();
+        r.setDataSource("test-h2");
+        r.setSql(sql);
+        return r;
+    }
+
+    private QueryRequest pagedReq(String sql, int page, int pageSize) {
+        QueryRequest r = req(sql);
+        r.setPage(page);
+        r.setPageSize(pageSize);
+        return r;
     }
 }
