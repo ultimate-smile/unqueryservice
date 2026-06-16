@@ -82,14 +82,14 @@ query-service:
       connection-test-query: "SELECT 1 FROM DUAL"
       max-pool-size: 20
 
-#    sqlserver-main:
-#      type: sqlserver
-#      url: "jdbc:sqlserver://${SQLSERVER_HOST:127.0.0.1}:1433;databaseName=${SQLSERVER_DATABASE:test};encrypt=true;trustServerCertificate=true"
-#      username: ${SQLSERVER_USER:sa}
-#      password: ${SQLSERVER_PASSWORD:W2pLIKgtWz4XunL9pja}
-#      schema: ${SQLSERVER_SCHEMA:dbo}
-#      connection-test-query: "SELECT 1"
-#      max-pool-size: 20
+    sqlserver-main:
+      type: sqlserver
+      url: "jdbc:sqlserver://${SQLSERVER_HOST:127.0.0.1}:1433;databaseName=${SQLSERVER_DATABASE:test};encrypt=true;trustServerCertificate=true"
+      username: ${SQLSERVER_USER:sa}
+      password: ${SQLSERVER_PASSWORD:W2pLIKgtWz4XunL9pja}
+      schema: ${SQLSERVER_SCHEMA:dbo}
+      connection-test-query: "SELECT 1"
+      max-pool-size: 20
 
 logging:
   level:
