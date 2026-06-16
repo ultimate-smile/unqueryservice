@@ -71,6 +71,15 @@ public class DataSourceRegistry {
         return ds;
     }
 
+    /** Returns the typed configuration for a registered logical name. */
+    public QueryServiceProperties.DataSourceConfig config(String name) {
+        QueryServiceProperties.DataSourceConfig cfg = properties.getDataSources().get(name);
+        if (cfg == null || !registry.containsKey(name)) {
+            throw new DataSourceNotFoundException(name);
+        }
+        return cfg;
+    }
+
     /** Returns an immutable view of all registered logical names. */
     public Set<String> names() {
         return Collections.unmodifiableSet(registry.keySet());
@@ -86,29 +95,40 @@ public class DataSourceRegistry {
         hc.setJdbcUrl(cfg.getUrl());
         hc.setUsername(cfg.getUsername());
         hc.setPassword(cfg.getPassword());
+        hc.setMinimumIdle(cfg.getMinIdle());
         hc.setMaximumPoolSize(cfg.getMaxPoolSize());
+        if (cfg.getCatalog() != null && !cfg.getCatalog().isBlank()) {
+            hc.setCatalog(cfg.getCatalog());
+        }
+        if (cfg.getSchema() != null && !cfg.getSchema().isBlank()) {
+            hc.setSchema(cfg.getSchema());
+        }
+        if (cfg.getConnectionTestQuery() != null && !cfg.getConnectionTestQuery().isBlank()) {
+            hc.setConnectionTestQuery(cfg.getConnectionTestQuery());
+        }
         hc.setConnectionTimeout(30_000);
         hc.setIdleTimeout(600_000);
         hc.setMaxLifetime(1_800_000);
 
-        if (cfg.getDriverClassName() != null && !cfg.getDriverClassName().isBlank()) {
-            hc.setDriverClassName(cfg.getDriverClassName());
-        } else {
-            // Attempt auto-detection by JDBC URL scheme
-            String url = cfg.getUrl() != null ? cfg.getUrl().toLowerCase() : "";
-            if (url.contains(":mysql:")) {
-                hc.setDriverClassName("com.mysql.cj.jdbc.Driver");
-            } else if (url.contains(":oracle:")) {
-                hc.setDriverClassName("oracle.jdbc.OracleDriver");
-            } else if (url.contains(":sqlserver:")) {
-                hc.setDriverClassName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-            } else if (url.contains(":sqlite:")) {
-                hc.setDriverClassName("org.sqlite.JDBC");
-            } else if (url.contains(":h2:")) {
-                hc.setDriverClassName("org.h2.Driver");
-            }
+        String driverClassName = resolveDriverClassName(cfg);
+        if (driverClassName != null) {
+            hc.setDriverClassName(driverClassName);
         }
 
         return hc;
+    }
+
+    private String resolveDriverClassName(QueryServiceProperties.DataSourceConfig cfg) {
+        if (cfg.getDriverClassName() != null && !cfg.getDriverClassName().isBlank()) {
+            return cfg.getDriverClassName();
+        }
+        String type = cfg.getType() != null ? cfg.getType().toLowerCase() : "";
+        String url = cfg.getUrl() != null ? cfg.getUrl().toLowerCase() : "";
+        if ("mysql".equals(type) || url.contains(":mysql:")) return "com.mysql.cj.jdbc.Driver";
+        if ("oracle".equals(type) || url.contains(":oracle:")) return "oracle.jdbc.OracleDriver";
+        if ("sqlserver".equals(type) || "mssql".equals(type) || url.contains(":sqlserver:")) return "com.microsoft.sqlserver.jdbc.SQLServerDriver";
+        if ("sqlite".equals(type) || url.contains(":sqlite:")) return "org.sqlite.JDBC";
+        if ("h2".equals(type) || url.contains(":h2:")) return "org.h2.Driver";
+        return null;
     }
 }

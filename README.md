@@ -2,7 +2,7 @@
 
 A production-ready **multi-database unified query service** built with Spring Boot 3 and Apache Calcite.
 
-Clients (e.g. ThingsBoard rule-chain scripts or widgets) send a `POST /api/query` request with a data-source name and a SQL statement. The service validates and optimises the query through Calcite, executes it against the target database via HikariCP, caches the result in Redis, and returns a consistent JSON payload.
+Clients (e.g. ThingsBoard rule-chain scripts or widgets) send a `POST /api/query` request with a data-source name and a SQL statement. The service validates queries with a Calcite-powered sandbox, executes validated SELECT statements natively against the target database via HikariCP, caches the result in Redis, and returns a consistent JSON payload.
 
 **Authentication and permission control are handled externally by ThingsBoard.** This service trusts all inbound requests.
 
@@ -21,8 +21,7 @@ ThingsBoard (auth + permission control)
 │   ├── SqlSecuritySandbox.validate()  (Calcite)   │
 │   ├── CacheService.get()  (Redis)                │
 │   ├── CalciteQueryService.execute()              │
-│   │     └── JdbcSchema (Calcite JDBC adapter)    │
-│   │           └── HikariCP → real JDBC driver    │
+│   │     └── HikariCP → native JDBC driver        │
 │   └── CacheService.put()  (Redis)                │
 │       ↓                                          │
 │  QueryResult JSON response                       │
@@ -36,7 +35,7 @@ ThingsBoard (auth + permission control)
 | Feature | Detail |
 |---|---|
 | **Multi-database** | MySQL · Oracle · SQL Server · SQLite · H2 (any JDBC-compliant database) |
-| **SQL planning** | Apache Calcite parses, validates, and optimises every query |
+| **SQL validation** | Apache Calcite parses and validates every query before native JDBC execution |
 | **Security sandbox** | Only `SELECT` is permitted; DDL, DML, and dangerous keywords are rejected before execution |
 | **Redis caching** | Results cached by `SHA-256(datasource + sql)`; configurable TTL and per-source eviction |
 | **Parameterised queries** | Bind parameters prevent SQL injection even if the sandbox were bypassed |
@@ -68,7 +67,7 @@ unqueryservice/
 │   │   ├── QueryRequest.java
 │   │   └── QueryResult.java
 │   ├── service/
-│   │   ├── CalciteQueryService.java     # Executes SQL via Calcite JDBC adapter
+│   │   ├── CalciteQueryService.java     # Executes validated SQL via native JDBC
 │   │   ├── CacheService.java            # Redis get/put/evict helpers
 │   │   ├── QueryService.java            # Interface
 │   │   └── QueryServiceImpl.java        # Pipeline orchestrator
@@ -208,9 +207,45 @@ query-service:
       url: "<jdbc-url>"          # Must be quoted if it contains colons
       username: <user>
       password: <pass>
-      driver-class-name: <optional, auto-detected from url>
+      driver-class-name: <optional, auto-detected from type/url>
+      catalog: <optional default catalog/database>
+      schema: <optional default schema, e.g. APP or dbo>
+      connection-test-query: <optional, e.g. SELECT 1 FROM DUAL>
+      min-idle: 1
       max-pool-size: 10
 ```
+
+### Oracle example
+
+```yaml
+query-service:
+  data-sources:
+    oracle-prod:
+      type: oracle
+      url: "jdbc:oracle:thin:@//db-host:1521/ORCLPDB1"
+      username: app
+      password: secret
+      schema: APP
+      connection-test-query: "SELECT 1 FROM DUAL"
+      max-pool-size: 20
+```
+
+### SQL Server example
+
+```yaml
+query-service:
+  data-sources:
+    sqlserver-prod:
+      type: sqlserver
+      url: "jdbc:sqlserver://db-host:1433;databaseName=app;encrypt=true;trustServerCertificate=true"
+      username: app
+      password: secret
+      schema: dbo
+      connection-test-query: "SELECT 1"
+      max-pool-size: 20
+```
+
+The service executes validated queries with native JDBC, so vendor-specific Oracle and SQL Server SELECT syntax is preserved. Paged requests are wrapped with dialect-specific `OFFSET ... FETCH` for Oracle and SQL Server, and `LIMIT ... OFFSET` for MySQL, SQLite, and H2.
 
 ---
 

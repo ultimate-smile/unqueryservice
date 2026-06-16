@@ -73,6 +73,26 @@ query-service:
       password: ${MYSQL_PASSWORD:W2pLIKgtWz4XunL9pja}
       max-pool-size: 20
 
+    # Oracle example (override credentials with environment variables before enabling)
+    # oracle-prod:
+    #   type: oracle
+    #   url: "jdbc:oracle:thin:@//${ORACLE_HOST:127.0.0.1}:${ORACLE_PORT:1521}/${ORACLE_SERVICE:ORCLPDB1}"
+    #   username: ${ORACLE_USER:app}
+    #   password: ${ORACLE_PASSWORD:secret}
+    #   schema: ${ORACLE_SCHEMA:APP}
+    #   connection-test-query: "SELECT 1 FROM DUAL"
+    #   max-pool-size: 20
+
+    # SQL Server example (override credentials with environment variables before enabling)
+    # sqlserver-prod:
+    #   type: sqlserver
+    #   url: "jdbc:sqlserver://${SQLSERVER_HOST:127.0.0.1}:${SQLSERVER_PORT:1433};databaseName=${SQLSERVER_DATABASE:app};encrypt=true;trustServerCertificate=true"
+    #   username: ${SQLSERVER_USER:sa}
+    #   password: ${SQLSERVER_PASSWORD:secret}
+    #   schema: ${SQLSERVER_SCHEMA:dbo}
+    #   connection-test-query: "SELECT 1"
+    #   max-pool-size: 20
+
 logging:
   level:
     com.unqueryservice: INFO

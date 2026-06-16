@@ -53,7 +53,7 @@ public class QueryServiceImpl implements QueryService {
 
         sandbox.validate(sql);
 
-        String cacheKey = cacheService.buildCacheKey(dataSourceName, sql);
+        String cacheKey = cacheService.buildCacheKey(dataSourceName, sql + "|params=" + request.getParameters());
         Optional<QueryResult> cached = cacheService.get(cacheKey);
         if (cached.isPresent()) {
             QueryResult hit = cached.get();
@@ -98,7 +98,7 @@ public class QueryServiceImpl implements QueryService {
 
         // Cache key includes page + pageSize so different pages are cached separately
         String cacheKey = cacheService.buildCacheKey(
-                dataSourceName, sql + "|page=" + page + "|size=" + pageSize);
+                dataSourceName, sql + "|params=" + request.getParameters() + "|page=" + page + "|size=" + pageSize);
         Optional<QueryResult> cached = cacheService.get(cacheKey);
         if (cached.isPresent()) {
             QueryResult hit = cached.get();
@@ -117,7 +117,7 @@ public class QueryServiceImpl implements QueryService {
         long total = extractCount(countRows);
 
         // 2. Paged data query
-        String pagedSql = "SELECT * FROM (" + sql + ") _page_wrap LIMIT " + pageSize + " OFFSET " + offset;
+        String pagedSql = calciteQueryService.pageSql(dataSourceName, sql, pageSize, offset);
         log.info("Paged query on '{}' (page={}, size={}): {}", dataSourceName, page, pageSize, abbreviate(sql));
         List<Map<String, Object>> rows = calciteQueryService.execute(
                 dataSourceName, pagedSql, request.getParameters(), pageSize);

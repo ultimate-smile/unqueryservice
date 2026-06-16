@@ -38,6 +38,10 @@ public class QueryServiceProperties {
         private String username;
         private String password;
         private String driverClassName;
+        private String catalog;
+        private String schema;
+        private String connectionTestQuery;
+        private int minIdle = 1;
         private int maxPoolSize = 10;
     }
 }
