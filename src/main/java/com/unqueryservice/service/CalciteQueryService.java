@@ -60,8 +60,14 @@ public class CalciteQueryService {
             stmt.setMaxRows(maxRows);
             stmt.setFetchSize(Math.min(maxRows, 1000));
 
+            int parameterMarkerCount = countParameterMarkers(sql);
+            int suppliedParamCount = params == null ? 0 : params.size();
+            if (suppliedParamCount < parameterMarkerCount) {
+                throw new SQLException("Missing SQL parameters: expected " + parameterMarkerCount
+                        + " but received " + suppliedParamCount);
+            }
             if (params != null) {
-                for (int i = 0; i < params.size(); i++) {
+                for (int i = 0; i < parameterMarkerCount; i++) {
                     stmt.setObject(i + 1, params.get(i));
                 }
             }
@@ -70,6 +76,79 @@ public class CalciteQueryService {
                 return mapResultSet(rs, maxRows);
             }
         }
+    }
+
+    static int countParameterMarkers(String sql) {
+        int count = 0;
+        boolean inSingleQuote = false;
+        boolean inDoubleQuote = false;
+        boolean inBacktick = false;
+        boolean inLineComment = false;
+        boolean inBlockComment = false;
+
+        for (int i = 0; i < sql.length(); i++) {
+            char current = sql.charAt(i);
+            char next = i + 1 < sql.length() ? sql.charAt(i + 1) : '\0';
+
+            if (inLineComment) {
+                if (current == '\n' || current == '\r') {
+                    inLineComment = false;
+                }
+                continue;
+            }
+            if (inBlockComment) {
+                if (current == '*' && next == '/') {
+                    inBlockComment = false;
+                    i++;
+                }
+                continue;
+            }
+            if (inSingleQuote) {
+                if (current == '\\' && next != '\0') {
+                    i++;
+                } else if (current == '\'' && next == '\'') {
+                    i++;
+                } else if (current == '\'') {
+                    inSingleQuote = false;
+                }
+                continue;
+            }
+            if (inDoubleQuote) {
+                if (current == '\\' && next != '\0') {
+                    i++;
+                } else if (current == '"' && next == '"') {
+                    i++;
+                } else if (current == '"') {
+                    inDoubleQuote = false;
+                }
+                continue;
+            }
+            if (inBacktick) {
+                if (current == '`') {
+                    inBacktick = false;
+                }
+                continue;
+            }
+
+            if (current == '-' && next == '-') {
+                inLineComment = true;
+                i++;
+            } else if (current == '#') {
+                inLineComment = true;
+            } else if (current == '/' && next == '*') {
+                inBlockComment = true;
+                i++;
+            } else if (current == '\'') {
+                inSingleQuote = true;
+            } else if (current == '"') {
+                inDoubleQuote = true;
+            } else if (current == '`') {
+                inBacktick = true;
+            } else if (current == '?') {
+                count++;
+            }
+        }
+        return count;
     }
 
     private List<Map<String, Object>> mapResultSet(ResultSet rs, int maxRows) throws SQLException {

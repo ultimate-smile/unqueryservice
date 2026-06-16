@@ -15,6 +15,24 @@ import static org.mockito.Mockito.*;
 class CalciteQueryServiceTest {
 
     @Test
+    void countsOnlyRealJdbcParameterMarkers() {
+        int count = CalciteQueryService.countParameterMarkers("""
+                SELECT *
+                FROM scene
+                WHERE category = ?
+                  AND plant = ?
+                  AND label = 'literal ?'
+                  AND quoted = "identifier ?"
+                  AND `odd?column` = 1
+                  -- ignored ?
+                  /* ignored ? */
+                LIMIT 1 OFFSET 1
+                """);
+
+        assertThat(count).isEqualTo(2);
+    }
+
+    @Test
     void timestampColumnsUseJdbcTimestampGetterInsteadOfVendorObject() throws Exception {
         ResultSet rs = mock(ResultSet.class);
         ResultSetMetaData meta = mock(ResultSetMetaData.class);
