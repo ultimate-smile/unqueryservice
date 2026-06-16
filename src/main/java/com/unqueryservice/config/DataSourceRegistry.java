@@ -121,24 +121,35 @@ public class DataSourceRegistry {
     }
 
     private void configureOraclePrivilegedRole(String name, QueryServiceProperties.DataSourceConfig cfg, HikariConfig hc) {
-        String role = cfg.getOraclePrivilegedRole();
-        if (role != null && !role.isBlank()) {
-            String normalized = role.toLowerCase();
-            if (!normalized.equals("sysdba") && !normalized.equals("sysoper")) {
-                throw new IllegalArgumentException("Data source '" + name + "' has unsupported oracle-privileged-role: " + role);
-            }
-            hc.addDataSourceProperty("internal_logon", normalized);
-            log.warn("Oracle data source '{}' is configured with privileged role '{}'. Prefer a least-privilege application user for normal query traffic.",
-                    name, normalized);
+        if (!isOracle(cfg)) {
             return;
         }
 
-        boolean oracle = "oracle".equalsIgnoreCase(cfg.getType())
-                || (cfg.getUrl() != null && cfg.getUrl().toLowerCase().contains(":oracle:"));
-        if (oracle && "sys".equalsIgnoreCase(cfg.getUsername())) {
-            log.warn("Oracle data source '{}' uses username SYS without oracle-privileged-role. Oracle will reject normal SYS logins with ORA-28009; set oracle-privileged-role: sysdba/sysoper or use a non-SYS application user.",
+        String role = cfg.getOraclePrivilegedRole();
+        if ((role == null || role.isBlank()) && "sys".equalsIgnoreCase(cfg.getUsername())) {
+            role = "sysdba";
+            log.warn("Oracle data source '{}' uses username SYS without oracle-privileged-role; defaulting to SYSDBA "
+                            + "to avoid ORA-28009. Prefer a least-privilege application user for normal query traffic.",
                     name);
         }
+
+        if (role == null || role.isBlank()) {
+            return;
+        }
+
+        String normalized = role.toLowerCase();
+        if (!normalized.equals("sysdba") && !normalized.equals("sysoper")) {
+            throw new IllegalArgumentException("Data source '" + name + "' has unsupported oracle-privileged-role: " + role);
+        }
+        hc.addDataSourceProperty("internal_logon", normalized);
+        log.warn("Oracle data source '{}' is configured with privileged role '{}'. Prefer a least-privilege "
+                        + "application user for normal query traffic.",
+                name, normalized);
+    }
+
+    private boolean isOracle(QueryServiceProperties.DataSourceConfig cfg) {
+        return "oracle".equalsIgnoreCase(cfg.getType())
+                || (cfg.getUrl() != null && cfg.getUrl().toLowerCase().contains(":oracle:"));
     }
 
     private String resolveDriverClassName(QueryServiceProperties.DataSourceConfig cfg) {

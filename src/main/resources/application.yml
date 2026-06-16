@@ -81,7 +81,7 @@ query-service:
     #   password: ${ORACLE_PASSWORD:secret}
     #   schema: ${ORACLE_SCHEMA:APP}
     #   connection-test-query: "SELECT 1 FROM DUAL"
-    #   # If ORACLE_USER=sys is unavoidable, set ORACLE_PRIVILEGED_ROLE=sysdba or sysoper.
+    #   # If ORACLE_USER=sys is unavoidable, this defaults to sysdba when left blank.
     #   # Prefer a least-privilege application user for normal queries.
     #   oracle-privileged-role: ${ORACLE_PRIVILEGED_ROLE:}
     #   max-pool-size: 20
