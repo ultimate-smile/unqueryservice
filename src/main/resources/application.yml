@@ -76,7 +76,7 @@ query-service:
     oracle-main:
       type: oracle
       url: "jdbc:oracle:thin:@//${ORACLE_HOST:127.0.0.1}:1521/${ORACLE_SERVICE:XE}"
-      username: ${ORACLE_USER:sys}
+      username: ${ORACLE_USER:system}
       password: ${ORACLE_PASSWORD:oracle}
       schema: ${ORACLE_SCHEMA:TEST}
       connection-test-query: "SELECT 1 FROM DUAL"

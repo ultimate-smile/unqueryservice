@@ -211,6 +211,7 @@ query-service:
       catalog: <optional default catalog/database>
       schema: <optional default schema, e.g. APP or dbo>
       connection-test-query: <optional, e.g. SELECT 1 FROM DUAL>
+      connection-properties: {}      # Optional JDBC driver properties
       min-idle: 1
       max-pool-size: 10
 ```
@@ -228,6 +229,20 @@ query-service:
       schema: APP
       connection-test-query: "SELECT 1 FROM DUAL"
       max-pool-size: 20
+```
+
+> **Oracle SYS connections:** prefer an application user such as `app`/`system` for pooled application access. If you intentionally connect as `SYS`, Oracle requires a privileged role; add `connection-properties.internal_logon: sysdba` (or `sysoper`) to the data source.
+
+```yaml
+query-service:
+  data-sources:
+    oracle-admin:
+      type: oracle
+      url: "jdbc:oracle:thin:@//db-host:1521/XEPDB1"
+      username: sys
+      password: secret
+      connection-properties:
+        internal_logon: sysdba
 ```
 
 ### SQL Server example

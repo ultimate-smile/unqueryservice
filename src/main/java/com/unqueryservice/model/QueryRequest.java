@@ -35,7 +35,9 @@ public class QueryRequest {
     private String sql;
 
     /**
-     * Positional JDBC bind parameters — each '?' in the SQL maps to one entry here.
+     * Positional JDBC bind parameters — each '?' marker in the SQL maps to one entry here.
+     * Extra entries are ignored so clients can pass pagination values separately from
+     * SQL that already contains literal LIMIT/OFFSET values.
      * Using parameters is strongly preferred over string-concatenating values into sql.
      */
     private List<Object> parameters;

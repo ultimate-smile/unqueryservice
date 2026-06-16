@@ -41,6 +41,7 @@ public class QueryServiceProperties {
         private String catalog;
         private String schema;
         private String connectionTestQuery;
+        private Map<String, String> connectionProperties = new LinkedHashMap<>();
         private int minIdle = 1;
         private int maxPoolSize = 10;
     }

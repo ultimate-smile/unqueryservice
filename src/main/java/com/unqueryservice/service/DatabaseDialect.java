@@ -23,9 +23,9 @@ public enum DatabaseDialect {
 
     public String pageSql(String sql, int limit, int offset) {
         return switch (this) {
-            case ORACLE -> "SELECT * FROM (" + sql + ") _page_wrap OFFSET " + offset + " ROWS FETCH NEXT " + limit + " ROWS ONLY";
-            case SQLSERVER -> "SELECT * FROM (" + sql + ") _page_wrap ORDER BY (SELECT 0) OFFSET " + offset + " ROWS FETCH NEXT " + limit + " ROWS ONLY";
-            default -> "SELECT * FROM (" + sql + ") _page_wrap LIMIT " + limit + " OFFSET " + offset;
+            case ORACLE -> "SELECT * FROM (" + sql + ") page_wrap OFFSET " + offset + " ROWS FETCH NEXT " + limit + " ROWS ONLY";
+            case SQLSERVER -> "SELECT * FROM (" + sql + ") page_wrap ORDER BY (SELECT 0) OFFSET " + offset + " ROWS FETCH NEXT " + limit + " ROWS ONLY";
+            default -> "SELECT * FROM (" + sql + ") page_wrap LIMIT " + limit + " OFFSET " + offset;
         };
     }
 }

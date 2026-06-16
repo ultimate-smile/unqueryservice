@@ -26,8 +26,8 @@ import java.util.Optional;
  * <p>The paged path wraps the caller's SQL in a sub-select so that any ORDER BY,
  * WHERE, JOIN, etc. in the original query is fully preserved:
  * <pre>
- *   SELECT COUNT(*) FROM (<originalSql>) _count_wrap
- *   SELECT * FROM (<originalSql>) _page_wrap LIMIT ? OFFSET ?
+ *   SELECT COUNT(*) FROM (<originalSql>) count_wrap
+ *   SELECT * FROM (<originalSql>) page_wrap LIMIT ? OFFSET ?
  * </pre>
  */
 @Slf4j
@@ -48,7 +48,7 @@ public class QueryServiceImpl implements QueryService {
     public QueryResult execute(QueryRequest request) {
         long startMs = System.currentTimeMillis();
         String dataSourceName = request.getDataSource();
-        String sql            = request.getSql().strip();
+        String sql            = stripTrailingSemicolons(request.getSql().strip());
         int    maxRows        = resolveMaxRows(request);
 
         sandbox.validate(sql);
@@ -89,7 +89,7 @@ public class QueryServiceImpl implements QueryService {
     public PageResult executePaged(QueryRequest request) {
         long startMs = System.currentTimeMillis();
         String dataSourceName = request.getDataSource();
-        String sql            = request.getSql().strip();
+        String sql            = stripTrailingSemicolons(request.getSql().strip());
         int    page           = request.getPage();
         int    pageSize       = request.getPageSize();
         int    offset         = (page - 1) * pageSize;
@@ -110,7 +110,7 @@ public class QueryServiceImpl implements QueryService {
         }
 
         // 1. COUNT query to get the total number of matching rows
-        String countSql = "SELECT COUNT(*) AS _total FROM (" + sql + ") _count_wrap";
+        String countSql = "SELECT COUNT(*) AS total FROM (" + sql + ") count_wrap";
         log.info("Counting rows on '{}': {}", dataSourceName, abbreviate(sql));
         List<Map<String, Object>> countRows = calciteQueryService.execute(
                 dataSourceName, countSql, request.getParameters(), 1);
@@ -169,9 +169,9 @@ public class QueryServiceImpl implements QueryService {
     private long extractCount(List<Map<String, Object>> countRows) {
         if (countRows.isEmpty()) return 0L;
         Map<String, Object> row = countRows.get(0);
-        // Column name may be _total or _TOTAL depending on the driver
+        // Column name may be total or TOTAL depending on the driver
         for (Map.Entry<String, Object> entry : row.entrySet()) {
-            if (entry.getKey().equalsIgnoreCase("_total") && entry.getValue() != null) {
+            if (entry.getKey().equalsIgnoreCase("total") && entry.getValue() != null) {
                 return ((Number) entry.getValue()).longValue();
             }
         }
@@ -190,5 +190,13 @@ public class QueryServiceImpl implements QueryService {
 
     private String abbreviate(String sql) {
         return sql.length() > 200 ? sql.substring(0, 200) + "…" : sql;
+    }
+
+    private String stripTrailingSemicolons(String sql) {
+        String normalized = sql;
+        while (normalized.endsWith(";")) {
+            normalized = normalized.substring(0, normalized.length() - 1).stripTrailing();
+        }
+        return normalized;
     }
 }
