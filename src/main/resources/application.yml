@@ -91,6 +91,14 @@ query-service:
       connection-test-query: "SELECT 1"
       max-pool-size: 20
 
+    test-h2:
+      type: h2
+      url: "jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL"
+      username: sa
+      password: ""
+      driver-class-name: org.h2.Driver
+      max-pool-size: 5
+
 logging:
   level:
     com.unqueryservice: INFO
