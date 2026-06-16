@@ -89,7 +89,7 @@ public class DataSourceRegistry {
     // Private helpers
     // -----------------------------------------------------------------------
 
-    private HikariConfig buildHikariConfig(String name, QueryServiceProperties.DataSourceConfig cfg) {
+    HikariConfig buildHikariConfig(String name, QueryServiceProperties.DataSourceConfig cfg) {
         HikariConfig hc = new HikariConfig();
         hc.setPoolName("hkpool-" + name);
         hc.setJdbcUrl(cfg.getUrl());
@@ -105,6 +105,9 @@ public class DataSourceRegistry {
         }
         if (cfg.getConnectionTestQuery() != null && !cfg.getConnectionTestQuery().isBlank()) {
             hc.setConnectionTestQuery(cfg.getConnectionTestQuery());
+        }
+        if (cfg.getConnectionProperties() != null) {
+            cfg.getConnectionProperties().forEach(hc::addDataSourceProperty);
         }
         hc.setConnectionTimeout(30_000);
         hc.setIdleTimeout(600_000);
