@@ -211,6 +211,9 @@ query-service:
       catalog: <optional default catalog/database>
       schema: <optional default schema, e.g. APP or dbo>
       connection-test-query: <optional, e.g. SELECT 1 FROM DUAL>
+      oracle-privileged-role: <optional Oracle-only sysdba|sysoper for SYS logins>
+      data-source-properties:
+        <driver-property>: <value>
       min-idle: 1
       max-pool-size: 10
 ```
@@ -227,6 +230,8 @@ query-service:
       password: secret
       schema: APP
       connection-test-query: "SELECT 1 FROM DUAL"
+      # Only if username is SYS; prefer a normal application user.
+      oracle-privileged-role: sysdba
       max-pool-size: 20
 ```
 
@@ -246,6 +251,8 @@ query-service:
 ```
 
 The service executes validated queries with native JDBC, so vendor-specific Oracle and SQL Server SELECT syntax is preserved. Paged requests are wrapped with dialect-specific `OFFSET ... FETCH` for Oracle and SQL Server, and `LIMIT ... OFFSET` for MySQL, SQLite, and H2.
+
+> Oracle note: use a normal application user whenever possible. Oracle rejects ordinary `SYS` password logins with `ORA-28009`; if a `SYS` connection is unavoidable, configure `oracle-privileged-role: sysdba` (or `sysoper`), which maps to the Oracle JDBC `internal_logon` property.
 
 ---
 

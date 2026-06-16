@@ -41,6 +41,8 @@ public class QueryServiceProperties {
         private String catalog;
         private String schema;
         private String connectionTestQuery;
+        private String oraclePrivilegedRole; // sysdba | sysoper, only when an Oracle SYS connection is unavoidable
+        private Map<String, String> dataSourceProperties = new LinkedHashMap<>();
         private int minIdle = 1;
         private int maxPoolSize = 10;
     }

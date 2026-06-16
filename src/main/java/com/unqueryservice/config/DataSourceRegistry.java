@@ -106,6 +106,8 @@ public class DataSourceRegistry {
         if (cfg.getConnectionTestQuery() != null && !cfg.getConnectionTestQuery().isBlank()) {
             hc.setConnectionTestQuery(cfg.getConnectionTestQuery());
         }
+        cfg.getDataSourceProperties().forEach(hc::addDataSourceProperty);
+        configureOraclePrivilegedRole(name, cfg, hc);
         hc.setConnectionTimeout(30_000);
         hc.setIdleTimeout(600_000);
         hc.setMaxLifetime(1_800_000);
@@ -116,6 +118,27 @@ public class DataSourceRegistry {
         }
 
         return hc;
+    }
+
+    private void configureOraclePrivilegedRole(String name, QueryServiceProperties.DataSourceConfig cfg, HikariConfig hc) {
+        String role = cfg.getOraclePrivilegedRole();
+        if (role != null && !role.isBlank()) {
+            String normalized = role.toLowerCase();
+            if (!normalized.equals("sysdba") && !normalized.equals("sysoper")) {
+                throw new IllegalArgumentException("Data source '" + name + "' has unsupported oracle-privileged-role: " + role);
+            }
+            hc.addDataSourceProperty("internal_logon", normalized);
+            log.warn("Oracle data source '{}' is configured with privileged role '{}'. Prefer a least-privilege application user for normal query traffic.",
+                    name, normalized);
+            return;
+        }
+
+        boolean oracle = "oracle".equalsIgnoreCase(cfg.getType())
+                || (cfg.getUrl() != null && cfg.getUrl().toLowerCase().contains(":oracle:"));
+        if (oracle && "sys".equalsIgnoreCase(cfg.getUsername())) {
+            log.warn("Oracle data source '{}' uses username SYS without oracle-privileged-role. Oracle will reject normal SYS logins with ORA-28009; set oracle-privileged-role: sysdba/sysoper or use a non-SYS application user.",
+                    name);
+        }
     }
 
     private String resolveDriverClassName(QueryServiceProperties.DataSourceConfig cfg) {
