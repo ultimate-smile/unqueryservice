@@ -12,6 +12,8 @@ class DatabaseDialectTest {
                 .pageSql("SELECT id FROM users", 25, 50);
 
         assertThat(sql).contains("OFFSET 50 ROWS FETCH NEXT 25 ROWS ONLY");
+        assertThat(sql).contains(") page_wrap ");
+        assertThat(sql).doesNotContain("_page_wrap");
     }
 
     @Test
