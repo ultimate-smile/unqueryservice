@@ -109,6 +109,22 @@ query-service:
       username: root
       password: secret
       max-pool-size: 20
+    oracle-main:
+      type: oracle
+      url: "jdbc:oracle:thin:@//localhost:1521/XEPDB1"
+      username: app
+      password: secret
+      schema: APP
+      connection-test-query: "SELECT 1 FROM DUAL"
+      max-pool-size: 20
+    sqlserver-main:
+      type: sqlserver
+      url: "jdbc:sqlserver://localhost:1433;databaseName=app;encrypt=true;trustServerCertificate=true"
+      username: sa
+      password: secret
+      schema: dbo
+      connection-test-query: "SELECT 1"
+      max-pool-size: 20
 ```
 
 ### 2. Build
@@ -208,8 +224,14 @@ query-service:
       url: "<jdbc-url>"          # Must be quoted if it contains colons
       username: <user>
       password: <pass>
-      driver-class-name: <optional, auto-detected from url>
+      driver-class-name: <optional, auto-detected from type/url>
+      catalog: <optional database catalog>
+      schema: <optional database schema/owner, e.g. APP or dbo>
+      connection-test-query: <optional vendor validation SQL>
       max-pool-size: 10
+      min-idle: 1
+      data-source-properties:
+        <vendor-property>: <value>
 ```
 
 ---

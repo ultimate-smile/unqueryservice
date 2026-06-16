@@ -1,7 +1,9 @@
 package com.unqueryservice.util;
 
+import com.unqueryservice.config.QueryServiceProperties;
 import com.unqueryservice.exception.SqlSecurityException;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.calcite.config.Lex;
 import org.apache.calcite.sql.*;
 import org.apache.calcite.sql.parser.SqlParseException;
 import org.apache.calcite.sql.parser.SqlParser;
@@ -49,6 +51,16 @@ public class SqlSecuritySandbox {
      * @param sql the raw SQL received from the client
      */
     public void validate(String sql) {
+        validate(sql, null);
+    }
+
+    /**
+     * Validates SQL using a parser lexical policy that matches the target data source.
+     *
+     * @param sql              the raw SQL received from the client
+     * @param dataSourceConfig optional target data-source configuration
+     */
+    public void validate(String sql, QueryServiceProperties.DataSourceConfig dataSourceConfig) {
         if (sql == null || sql.isBlank()) {
             throw new SqlSecurityException("SQL statement must not be empty");
         }
@@ -65,7 +77,7 @@ public class SqlSecuritySandbox {
             }
         }
 
-        SqlParser parser = SqlParser.create(sql, SqlParser.Config.DEFAULT);
+        SqlParser parser = SqlParser.create(sql, SqlParser.config().withLex(resolveLex(dataSourceConfig)));
         SqlNode node;
         try {
             // parseStmt() accepts DML/DDL (unlike parseQuery()) so they reach the kind check
@@ -82,6 +94,17 @@ public class SqlSecuritySandbox {
         }
 
         log.debug("SQL passed security validation (kind={})", kind);
+    }
+
+    private Lex resolveLex(QueryServiceProperties.DataSourceConfig dataSourceConfig) {
+        String type = dataSourceConfig == null || dataSourceConfig.getType() == null
+                ? ""
+                : dataSourceConfig.getType().toLowerCase(Locale.ROOT);
+        return switch (type) {
+            case "oracle" -> Lex.ORACLE;
+            case "sqlserver", "mssql" -> Lex.SQL_SERVER;
+            default -> Lex.MYSQL;
+        };
     }
 
     private boolean isAllowedKind(SqlKind kind) {

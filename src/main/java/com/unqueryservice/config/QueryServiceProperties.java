@@ -38,6 +38,22 @@ public class QueryServiceProperties {
         private String username;
         private String password;
         private String driverClassName;
+
+        /** Optional database catalog to expose as the Calcite JDBC schema root. */
+        private String catalog;
+
+        /** Optional database schema/owner (for example Oracle user or SQL Server dbo). */
+        private String schema;
+
+        /** Optional validation query used by HikariCP before a connection is handed out. */
+        private String connectionTestQuery;
+
         private int maxPoolSize = 10;
+
+        /** Minimum number of idle connections kept in the pool. */
+        private int minIdle = 1;
+
+        /** Additional vendor-specific Hikari data-source properties. */
+        private Map<String, String> dataSourceProperties = new LinkedHashMap<>();
     }
 }

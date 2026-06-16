@@ -6,6 +6,7 @@ import com.unqueryservice.exception.QueryServiceException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.calcite.adapter.jdbc.JdbcSchema;
+import org.apache.calcite.config.Lex;
 import org.apache.calcite.jdbc.CalciteConnection;
 import org.apache.calcite.schema.SchemaPlus;
 import org.springframework.stereotype.Service;
@@ -56,6 +57,7 @@ public class CalciteQueryService {
                                               int maxRows) {
 
         DataSource targetDs = dataSourceRegistry.get(dataSourceName);
+        QueryServiceProperties.DataSourceConfig dataSourceConfig = dataSourceRegistry.config(dataSourceName);
 
         // Load the Calcite driver (idempotent)
         try {
@@ -65,14 +67,19 @@ public class CalciteQueryService {
         }
 
         Properties calciteProps = new Properties();
-        calciteProps.setProperty("lex", "MYSQL");   // Use MySQL lexer for broader SQL compatibility
+        calciteProps.setProperty("lex", resolveLex(dataSourceConfig.getType()).name());
 
         try (Connection calciteConn = DriverManager.getConnection("jdbc:calcite:", calciteProps)) {
             CalciteConnection cc = calciteConn.unwrap(CalciteConnection.class);
             SchemaPlus rootSchema = cc.getRootSchema();
 
             // Register the target JDBC data source as a named schema
-            JdbcSchema jdbcSchema = JdbcSchema.create(rootSchema, dataSourceName, targetDs, null, null);
+            JdbcSchema jdbcSchema = JdbcSchema.create(
+                    rootSchema,
+                    dataSourceName,
+                    targetDs,
+                    blankToNull(dataSourceConfig.getCatalog()),
+                    blankToNull(dataSourceConfig.getSchema()));
             rootSchema.add(dataSourceName, jdbcSchema);
 
             // Set the default schema so unqualified table names resolve correctly
@@ -89,6 +96,19 @@ public class CalciteQueryService {
     // -----------------------------------------------------------------------
     // Private helpers
     // -----------------------------------------------------------------------
+
+    private Lex resolveLex(String type) {
+        String normalizedType = type == null ? "" : type.toLowerCase(Locale.ROOT);
+        return switch (normalizedType) {
+            case "oracle" -> Lex.ORACLE;
+            case "sqlserver", "mssql" -> Lex.SQL_SERVER;
+            default -> Lex.MYSQL;
+        };
+    }
+
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
+    }
 
     private List<Map<String, Object>> executeQuery(Connection conn,
                                                     String sql,

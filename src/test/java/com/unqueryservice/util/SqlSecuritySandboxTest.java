@@ -1,5 +1,6 @@
 package com.unqueryservice.util;
 
+import com.unqueryservice.config.QueryServiceProperties;
 import com.unqueryservice.exception.SqlSecurityException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -141,4 +142,14 @@ class SqlSecuritySandboxTest {
                 .isInstanceOf(SqlSecurityException.class)
                 .hasMessageContaining("exceeds maximum allowed length");
     }
+
+    @Test
+    void sqlServerBracketQuotedIdentifiers_areAcceptedForSqlServerDataSource() {
+        QueryServiceProperties.DataSourceConfig cfg = new QueryServiceProperties.DataSourceConfig();
+        cfg.setType("sqlserver");
+
+        assertThatCode(() -> sandbox.validate("SELECT [id], [name] FROM [employees]", cfg))
+                .doesNotThrowAnyException();
+    }
+
 }

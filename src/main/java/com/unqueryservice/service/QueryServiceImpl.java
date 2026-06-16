@@ -39,8 +39,8 @@ public class QueryServiceImpl implements QueryService {
         String sql = request.getSql().strip();
         int maxRows = resolveMaxRows(request);
 
-        // 1. Validate the SQL through the security sandbox
-        sandbox.validate(sql);
+        // 1. Validate the SQL through the security sandbox using the target dialect
+        sandbox.validate(sql, properties.getDataSources().get(dataSourceName));
 
         // 2. Check the cache
         String cacheKey = cacheService.buildCacheKey(dataSourceName, sql);
